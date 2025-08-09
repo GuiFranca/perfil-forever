@@ -1,5 +1,4 @@
 import { Component, Input } from '@angular/core';
-import { Linha } from '../../services/card-generator.service';
 
 @Component({
   selector: 'app-card',
@@ -9,5 +8,5 @@ import { Linha } from '../../services/card-generator.service';
 export class CardComponent {
   @Input() categoria!: string;
   @Input() resposta!: string;
-  @Input() linhas!: Linha[];
+  @Input() dicas!: string[];
 }
