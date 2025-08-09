@@ -1,24 +1,23 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-// import { RouterOutlet } from '@angular/router';
-
-import { CardGeneratorService } from './services/card-generator.service';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from '@angular/core';
+import { CardGeneratorService, Carta } from './services/card-generator.service';
 
 @Component({
   selector: 'app-root',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   standalone: true,
-  providers: [CardGeneratorService],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent {
-  carta: any;
+export class AppComponent implements OnInit {
+  carta: Carta | null = null;
 
-  constructor(private gerador: CardGeneratorService) {
-    this.carta = this.gerador.gerarCarta();
+  constructor(private gerador: CardGeneratorService) {}
+
+  ngOnInit() {
+    this.novaCarta();
   }
 
   novaCarta() {
-    this.carta = this.gerador.gerarCarta();
+    this.gerador.gerarCarta().subscribe((c) => this.carta = c);
   }
 }

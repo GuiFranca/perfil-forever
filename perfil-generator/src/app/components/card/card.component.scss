@@ -30,5 +30,10 @@
   .dicas {
     margin-top: 10px;
     padding-left: 20px;
+
+    .acao {
+      color: #d00;
+      font-weight: bold;
+    }
   }
 }
