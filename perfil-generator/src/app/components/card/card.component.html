@@ -4,6 +4,6 @@
     <span class="resposta">{{ resposta }}</span>
   </div>
   <ol class="dicas">
-    <li *ngFor="let dica of dicas">{{ dica }}</li>
+    <li *ngFor="let linha of linhas" [class.acao]="linha.tipo === 'acao'">{{ linha.texto }}</li>
   </ol>
 </div>

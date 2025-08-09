@@ -1,8 +1,9 @@
 <div class="container">
   <app-card
+    *ngIf="carta"
     [categoria]="carta.categoria"
     [resposta]="carta.resposta"
-    [dicas]="carta.dicas"
+    [linhas]="carta.linhas"
   >
   </app-card>
   <button (click)="novaCarta()">Gerar Nova Carta</button>
