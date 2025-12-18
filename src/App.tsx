@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RotateCcw, Trophy, Eye, EyeOff } from 'lucide-react';
+import { GoogleGenAI } from '@google/genai';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -93,15 +94,10 @@ const PerfilGame = () => {
                 return;
             }
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: `Crie uma carta do jogo Perfil sobre ${categoryMap[selectedCategory]}. Dificuldade: ${difficultyText}.${usedList}
+            // Inicializa o cliente do Google GenAI
+            const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+            const prompt = `Crie uma carta do jogo Perfil sobre ${categoryMap[selectedCategory]}. Dificuldade: ${difficultyText}.${usedList}
 
 IMPORTANTE: Responda APENAS com um JSON válido, sem qualquer texto adicional, sem markdown, sem explicações. O JSON deve ter exatamente esta estrutura:
 
@@ -127,14 +123,18 @@ Exemplo de progressão:
 - Dica 10: "É conhecido mundialmente desde os anos 90"
 - Dica 20: "É o ratinho mais famoso do mundo, mascote da Disney"
 
-Responda APENAS com o JSON, nada mais.`
-                        }]
-                    }]
-                })
+Responda APENAS com o JSON, nada mais.`;
+
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: prompt,
             });
 
-            const data = await response.json();
-            let content = data.candidates[0].content.parts[0].text.trim();
+            if (!response.text) {
+                throw new Error('Resposta vazia da API Gemini');
+            }
+
+            let content = response.text.trim();
 
             // Remove markdown e limpa o conteúdo
             content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -158,7 +158,11 @@ Responda APENAS com o JSON, nada mais.`
 
             setCurrentCard(cardData);
         } catch (error) {
-            console.error('Erro ao gerar carta:', error);
+            console.error('Erro ao gerar carta (DETALHES):', error);
+            if (error instanceof Error) {
+                console.error('Mensagem de erro:', error.message);
+                console.error('Stack trace:', error.stack);
+            }
             // Carta de exemplo em caso de erro
             const exampleCard = {
                 categoria: 'pessoa',
