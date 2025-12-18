@@ -3,6 +3,7 @@ import { Sparkles, RotateCcw, Trophy, Eye, EyeOff } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 
 const PerfilGame = () => {
     const [currentCard, setCurrentCard] = useState<any>(null);
@@ -87,17 +88,7 @@ const PerfilGame = () => {
             ? `\n\nIMPORTANTE: NÃO use nenhuma destas respostas que já foram usadas: ${usedCards.join(', ')}`
             : '';
 
-        try {
-            if (!GEMINI_API_KEY) {
-                alert("Por favor, configure sua API Key no arquivo .env (variável VITE_GEMINI_API_KEY)");
-                setIsGenerating(false);
-                return;
-            }
-
-            // Inicializa o cliente do Google GenAI
-            const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-            const prompt = `Crie uma carta do jogo Perfil sobre ${categoryMap[selectedCategory]}. Dificuldade: ${difficultyText}.${usedList}
+        const prompt = `Crie uma carta do jogo Perfil sobre ${categoryMap[selectedCategory]}. Dificuldade: ${difficultyText}.${usedList}
 
 IMPORTANTE: Responda APENAS com um JSON válido, sem qualquer texto adicional, sem markdown, sem explicações. O JSON deve ter exatamente esta estrutura:
 
@@ -125,6 +116,14 @@ Exemplo de progressão:
 
 Responda APENAS com o JSON, nada mais.`;
 
+        // Função para tentar gerar com Gemini
+        const tryGemini = async () => {
+            if (!GEMINI_API_KEY) {
+                throw new Error('GEMINI_API_KEY não configurada');
+            }
+
+            const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
             const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: prompt,
@@ -135,11 +134,77 @@ Responda APENAS com o JSON, nada mais.`;
             }
 
             let content = response.text.trim();
-
-            // Remove markdown e limpa o conteúdo
             content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
-            const cardData = JSON.parse(content);
+            return JSON.parse(content);
+        };
+
+        // Função para tentar gerar com OpenRouter (fallback)
+        const tryOpenRouter = async () => {
+            if (!OPENROUTER_API_KEY) {
+                throw new Error('OPENROUTER_API_KEY não configurada');
+            }
+
+            console.log('🔄 Tentando com OpenRouter (fallback - Xiaomi MiMo V2 Flash)...');
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'Perfil Game'
+                },
+                body: JSON.stringify({
+                    model: 'xiaomi/mimo-v2-flash:free',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`OpenRouter API error: ${response.status} - ${JSON.stringify(errorData)}`);
+            }
+
+            const data = await response.json();
+
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                throw new Error('Resposta inválida da API OpenRouter');
+            }
+
+            let content = data.choices[0].message.content.trim();
+            content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+            return JSON.parse(content);
+        };
+
+        try {
+            let cardData;
+            let usedAPI = 'Gemini';
+
+            // Tenta primeiro com Gemini
+            try {
+                cardData = await tryGemini();
+                console.log('✅ Carta gerada com Gemini');
+            } catch (geminiError) {
+                console.warn('⚠️ Gemini falhou:', geminiError);
+
+                // Fallback para OpenRouter
+                try {
+                    cardData = await tryOpenRouter();
+                    usedAPI = 'OpenRouter';
+                    console.log('✅ Carta gerada com OpenRouter (fallback)');
+                } catch (openrouterError) {
+                    console.error('❌ OpenRouter também falhou:', openrouterError);
+                    throw new Error('Ambas APIs (Gemini e OpenRouter) falharam');
+                }
+            }
 
             // Adiciona a resposta à lista de cartas usadas
             const newUsedCards = [...usedCards, cardData.resposta];
@@ -157,12 +222,20 @@ Responda APENAS com o JSON, nada mais.`;
             setShuffledOrder(shuffled);
 
             setCurrentCard(cardData);
+
+            // Mostra notificação discreta de qual API foi usada
+            if (usedAPI === 'OpenRouter') {
+                console.log('ℹ️ Esta carta foi gerada com OpenRouter (Gemini indisponível)');
+            }
         } catch (error) {
             console.error('Erro ao gerar carta (DETALHES):', error);
             if (error instanceof Error) {
                 console.error('Mensagem de erro:', error.message);
                 console.error('Stack trace:', error.stack);
             }
+
+            alert('⚠️ Erro ao gerar carta.\n\nVerifique se suas API Keys estão configuradas no arquivo .env:\n- VITE_GEMINI_API_KEY\n- VITE_OPENROUTER_API_KEY (fallback)');
+
             // Carta de exemplo em caso de erro
             const exampleCard = {
                 categoria: 'pessoa',
