@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RotateCcw, Trophy, Eye, EyeOff } from 'lucide-react';
 
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
 const PerfilGame = () => {
     const [currentCard, setCurrentCard] = useState<any>(null);
     const [revealedClues, setRevealedClues] = useState<number[]>([]);
@@ -85,17 +87,21 @@ const PerfilGame = () => {
             : '';
 
         try {
-            const response = await fetch("https://api.anthropic.com/v1/messages", {
+            if (!GEMINI_API_KEY) {
+                alert("Por favor, configure sua API Key no arquivo .env (variável VITE_GEMINI_API_KEY)");
+                setIsGenerating(false);
+                return;
+            }
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 1000,
-                    messages: [{
-                        role: "user",
-                        content: `Crie uma carta do jogo Perfil sobre ${categoryMap[selectedCategory]}. Dificuldade: ${difficultyText}.${usedList}
+                    contents: [{
+                        parts: [{
+                            text: `Crie uma carta do jogo Perfil sobre ${categoryMap[selectedCategory]}. Dificuldade: ${difficultyText}.${usedList}
 
 IMPORTANTE: Responda APENAS com um JSON válido, sem qualquer texto adicional, sem markdown, sem explicações. O JSON deve ter exatamente esta estrutura:
 
@@ -122,12 +128,13 @@ Exemplo de progressão:
 - Dica 20: "É o ratinho mais famoso do mundo, mascote da Disney"
 
 Responda APENAS com o JSON, nada mais.`
+                        }]
                     }]
                 })
             });
 
             const data = await response.json();
-            let content = data.content[0].text.trim();
+            let content = data.candidates[0].content.parts[0].text.trim();
 
             // Remove markdown e limpa o conteúdo
             content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -263,8 +270,8 @@ Responda APENAS com o JSON, nada mais.`
                                         key={d.id}
                                         onClick={() => toggleDifficulty(d.id)}
                                         className={`py-3 px-4 rounded-lg font-medium transition-all ${selectedDifficulties.includes(d.id)
-                                                ? 'bg-yellow-400 text-purple-900 shadow-lg scale-105'
-                                                : 'bg-white/20 text-white hover:bg-white/30 opacity-50'
+                                            ? 'bg-yellow-400 text-purple-900 shadow-lg scale-105'
+                                            : 'bg-white/20 text-white hover:bg-white/30 opacity-50'
                                             }`}
                                     >
                                         <div className="text-2xl mb-1">{d.emoji}</div>
@@ -289,8 +296,8 @@ Responda APENAS com o JSON, nada mais.`
                                         key={cat.id}
                                         onClick={() => setCategory(cat.id)}
                                         className={`py-2 px-3 rounded-lg font-medium text-sm transition-all ${category === cat.id
-                                                ? `${cat.color} text-white shadow-lg scale-105`
-                                                : 'bg-white/20 text-white hover:bg-white/30'
+                                            ? `${cat.color} text-white shadow-lg scale-105`
+                                            : 'bg-white/20 text-white hover:bg-white/30'
                                             }`}
                                     >
                                         {cat.name}
@@ -366,8 +373,8 @@ Responda APENAS com o JSON, nada mais.`
                                         onClick={() => revealClue(i)}
                                         disabled={revealedClues.includes(i)}
                                         className={`aspect-square rounded-lg font-bold text-xl transition-all ${revealedClues.includes(i)
-                                                ? 'bg-green-500 text-white shadow-lg'
-                                                : 'bg-white/30 text-white hover:bg-white/50 hover:scale-105'
+                                            ? 'bg-green-500 text-white shadow-lg'
+                                            : 'bg-white/30 text-white hover:bg-white/50 hover:scale-105'
                                             }`}
                                     >
                                         {i + 1}
