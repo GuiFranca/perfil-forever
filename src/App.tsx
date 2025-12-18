@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ViewMode } from './types/game';
 import { useGameStorage } from './hooks/useGameStorage';
 import { useCardGenerator } from './hooks/useCardGenerator';
