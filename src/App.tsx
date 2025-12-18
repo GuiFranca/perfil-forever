@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, RotateCcw, Trophy, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, RotateCcw, Trophy, Eye, EyeOff, List, Grid, Languages, CheckCircle } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -14,6 +14,7 @@ const PerfilGame = () => {
     const [category, setCategory] = useState('todos');
     const [shuffledOrder, setShuffledOrder] = useState<number[]>([]);
     const [usedCards, setUsedCards] = useState<string[]>([]);
+    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
     // Carregar cartas já usadas do storage ao iniciar
     useEffect(() => {
@@ -440,37 +441,110 @@ Responda APENAS com o JSON, nada mais.`;
                             )}
                         </div>
 
-                        {/* Grid de Dicas */}
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-                            <h3 className="text-white text-xl font-semibold mb-4">Escolha um Número</h3>
-                            <div className="grid grid-cols-5 gap-2 mb-6">
-                                {Array.from({ length: 20 }, (_, i) => i).map(i => (
+                        {/* Lista/Grid de Dicas */}
+                        <div className="bg-[#2a2a6e] backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl overflow-hidden relative">
+                            <div className="flex items-center justify-between mb-6 relative z-10">
+                                <div className="flex items-center gap-3">
+                                    <List className="text-white" size={24} />
+                                    <h3 className="text-white text-xl font-bold">Lista de Dicas</h3>
+                                </div>
+                                <div className="flex flex-col gap-2 absolute right-0 top-0">
                                     <button
-                                        key={i}
-                                        onClick={() => revealClue(i)}
-                                        disabled={revealedClues.includes(i)}
-                                        className={`aspect-square rounded-lg font-bold text-xl transition-all ${revealedClues.includes(i)
-                                            ? 'bg-green-500 text-white shadow-lg'
-                                            : 'bg-white/30 text-white hover:bg-white/50 hover:scale-105'
-                                            }`}
+                                        onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+                                        className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition-all backdrop-blur-sm"
+                                        title={viewMode === 'list' ? "Ver como Grade" : "Ver como Lista"}
                                     >
-                                        {i + 1}
+                                        {viewMode === 'list' ? <Grid size={20} /> : <List size={20} />}
                                     </button>
-                                ))}
+                                    {viewMode === 'list' && (
+                                        <button
+                                            className="bg-pink-500 hover:bg-pink-600 text-white p-2 rounded-full transition-all shadow-lg animate-pulse"
+                                            title="Traduzir (Simulado)"
+                                        >
+                                            <Languages size={20} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Dicas Reveladas */}
-                            {revealedClues.length > 0 && (
-                                <div className="space-y-2">
-                                    <h4 className="text-white font-semibold text-lg mb-3">Dicas Reveladas:</h4>
-                                    {revealedClues.map(index => {
-                                        const originalIndex = shuffledOrder[index];
+                            {viewMode === 'grid' ? (
+                                <>
+                                    <div className="grid grid-cols-5 gap-2 mb-6">
+                                        {Array.from({ length: 20 }, (_, i) => i).map(i => (
+                                            <button
+                                                key={i}
+                                                onClick={() => revealClue(i)}
+                                                disabled={revealedClues.includes(i)}
+                                                className={`aspect-square rounded-lg font-bold text-xl transition-all ${revealedClues.includes(i)
+                                                    ? 'bg-green-500 text-white shadow-lg'
+                                                    : 'bg-white/10 text-white hover:bg-white/30 hover:scale-105 border border-white/5'
+                                                    }`}
+                                            >
+                                                {i + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {/* Dicas Reveladas (Modo Grid) */}
+                                    {revealedClues.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-white font-semibold text-lg mb-3">Dicas Reveladas:</h4>
+                                            {revealedClues.map(index => {
+                                                const originalIndex = shuffledOrder[index];
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        className="bg-white/10 rounded-lg p-4 text-white border border-white/10"
+                                                    >
+                                                        <span className="font-bold text-yellow-300">#{index + 1}</span> {currentCard.dicas[originalIndex]}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="space-y-3">
+                                    {Array.from({ length: 20 }, (_, i) => i).map(i => {
+                                        const isRevealed = revealedClues.includes(i);
+                                        const originalIndex = shuffledOrder[i];
                                         return (
                                             <div
-                                                key={index}
-                                                className="bg-white/20 rounded-lg p-4 text-white border border-white/30"
+                                                key={i}
+                                                onClick={() => !isRevealed && revealClue(i)}
+                                                className={`relative rounded-2xl p-4 transition-all border ${isRevealed
+                                                    ? 'bg-white/10 border-white/20'
+                                                    : 'bg-white/5 border-white/5 hover:bg-white/10 cursor-pointer'
+                                                    }`}
                                             >
-                                                <span className="font-bold text-yellow-300">#{index + 1}</span> {currentCard.dicas[originalIndex]}
+                                                <div className="flex items-start gap-4">
+                                                    {/* Número */}
+                                                    <div className={`w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-lg shadow-lg ${isRevealed
+                                                        ? 'bg-green-500 text-white'
+                                                        : 'bg-[#4c4c8a] text-white/50'
+                                                        }`}>
+                                                        {i + 1}
+                                                    </div>
+
+                                                    {/* Texto - Ocupa o espaço restante */}
+                                                    <div className="flex-1 py-1">
+                                                        {isRevealed ? (
+                                                            <p className="text-white font-medium leading-snug">
+                                                                {currentCard.dicas[originalIndex]}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-white/30 font-medium">
+                                                                Toque para revelar a dica {i + 1}...
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Ícone de Check (apenas se revelado) */}
+                                                    {isRevealed && (
+                                                        <div className="flex-shrink-0 text-green-500 mt-1">
+                                                            <CheckCircle size={20} fill="currentColor" className="text-green-900" />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })}
